@@ -1,0 +1,16 @@
+body{
+    font-size : 40px;
+}
+
+#first{
+    background-color: #f9c00c;
+}
+
+#second{
+    background-color: #00b9f1;
+    border : 5px solid red;
+}
+
+#third{
+    background-color: #7200da;
+}

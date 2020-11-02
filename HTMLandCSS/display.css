@@ -1,0 +1,20 @@
+body{
+    background-color: #cccccc;
+}
+
+.grid{
+    width: 500px;
+    margin: 0 auto;
+    background-color: white;
+    text-align: center;
+}
+
+.grid-item{
+    width: 100px;
+    height: 100px;
+    float: left;
+}
+
+.grid-item.a{background-color: crimson;}
+.grid-item.b{background-color: yellowgreen;}
+.grid-item.c{background-color: orange;}

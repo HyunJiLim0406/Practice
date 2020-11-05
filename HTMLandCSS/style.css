@@ -1,0 +1,28 @@
+body{
+    background-color: white;
+}
+
+.container{
+    color: black;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr), minmax(50px, 500px);
+    
+}
+
+#title{
+    text-align: center;
+    grid-column :2;
+    grid-row: 1;
+}
+
+.em{
+    grid-column :2;
+    grid-row: 2; 
+    text-align: center;
+    font-size: 100px;
+}
+.btn{
+    grid-column :2;
+    grid-row: 3; 
+}

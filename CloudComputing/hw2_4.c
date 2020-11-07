@@ -4,7 +4,7 @@
 
 void main(int argc, char *argv[]){
     int i, j, k, p_size;
-    double R[102][102]={0.0};
+    double R[102][102]={0.0}, local_R[27][102]; //local_R의 최대 행 갯수 27개
     MPI_Datatype rowtype; //가로로 자를 것이기 때문에 rowtype 준비
     int my_rank, size;
 
@@ -12,17 +12,12 @@ void main(int argc, char *argv[]){
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
     p_size = 100/size; //프로세스의 수에 따라 각 프로세스가 계산할 행의 수
-    double **local_R = (double **)malloc(sizeof(double *)*(p_size+2)); //각 프로세스의 R 동적할당
-    for(i=0;i<p_size+2;i++){
-        local_R[i]=(double *)malloc(sizeof(double)*100); //c
-    }
-
+    
     if(my_rank==0){ //R 배열 초기화
         for(j=40;j<60;j++){ 
             R[0][j]=200.0;
         }
     }
-    
     
     MPI_Type_contiguous(102, MPI_DOUBLE, &rowtype); //배열의 1행에 대한 타입 정의
     MPI_Type_commit(&rowtype);
@@ -65,11 +60,5 @@ void main(int argc, char *argv[]){
             printf("\n");
         }
     }
-
-    //local_R 동적할당 해제
-    free(local_R[0]);
-    free(local_R);
-    local_R=NULL;
-
     MPI_Finalize();
 }

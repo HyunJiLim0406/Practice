@@ -32,7 +32,7 @@ class CONV_LAYER:
                     for c in range(self.num_inch):
                         for i in range(self.dim_kernel):
                             for j in range(self.dim_kernel):
-                                ofmap[k, x, y]+=self.kernels[c, k, i, j] * padded_ifmap[c, x+i, y+j]
+                                ofmap[k, x, y] += self.kernels[c, k, i, j] * padded_ifmap[c, x + i, y + j]
         return ofmap
 
     def backprop(self, I, dO):
@@ -45,10 +45,11 @@ class CONV_LAYER:
                     for c in range(self.num_inch):
                         for i in range(self.dim_kernel):
                             for j in range(self.dim_kernel):
-                                dK[c, k, i, j] += padded_I[c, x+i, y+j] * dO[k, x, y]
-        #your job: dI
+                                dK[c, k, i, j] += padded_I[c, x + i, y + j] * dO[k, x, y]
+        # your job: dI
 
         return dK
+
 
 class FC_LAYER:
 
@@ -66,67 +67,80 @@ class FC_LAYER:
         dB = np.sum(dZ2, axis=0, keepdims=True)
         return dW, dZ1, dB
 
+
 class RELU_LAYER:
     def forward(self, x):
-        return x*(x>0)
+        return x * (x > 0)
+
     def backprop(self, x):
-        return 1.0*(x>0)
+        return 1.0 * (x > 0)
+
 
 def softmax(x):
     return np.exp(x) / np.sum(np.exp(x))
 
+
 class CROSS_ENTROPY_ERROR:
     def forward(self, x, y):
-        return -1.0 * np.sum(np.multiply(np.log(x+0.001e-10), y))
+        return -1.0 * np.sum(np.multiply(np.log(x + 0.001e-10), y))
 
     def backprop(self, x, y):
         return (x - y)
 
+
 conv1 = CONV_LAYER(dim_ifmap=28, num_inch=1, dim_kernel=3, num_outch=5, padding=1)
 relu1 = RELU_LAYER()
-fc1 = FC_LAYER(28*28*5, 10)
+fc1 = FC_LAYER(28 * 28 * 5, 10)
 cse1 = CROSS_ENTROPY_ERROR()
 lr = 0.001
 num_epochs = 3
-train_iterations = 1000
 test_iterations = 100
+batch_size = 2
+train_iterations = int(1000 / batch_size)
 
 for epoch in range(num_epochs):
 
     total_trained = 0
     train_correct = 0
     train_cost = 0
-    rand_indices = np.random.choice(len(x_train), train_iterations, replace=True)
+    rand_indices = np.random.choice(len(x_train), (train_iterations, batch_size), replace=True)
+    #mini_batch = int(1000 / batch_size)
     for i in rand_indices:
-        total_trained+=1
-        #미니 배치 수정
-        mini_x_train = x_train[i].reshape(1, 28, 28)
-        mini_y_train = y_train[i]
-        one_hot_y = np.zeros((1, 10), dtype=float)
-        one_hot_y[np.arange(1), mini_y_train] = 1.0
+        batch_dK_CONV1 = 0
+        batch_dW_FC1 = 0
+        batch_dB_FC1 = 0
+        total_trained += 1
+        for j in i:
+            # 미니 배치 수정
+            #batch_mask = np.random.choice(rand_indices, batch_size)
+            mini_x_train = x_train[j].reshape(1, 28, 28)
+            mini_y_train = y_train[j]
+            one_hot_y = np.zeros((1, 10), dtype=float)
+            one_hot_y[np.arange(1), mini_y_train] = 1.0
 
-        #forward propagation
-        conv1_ofmap = conv1.forward(mini_x_train)
-        relu1_ofmap = relu1.forward(conv1_ofmap)
-        fc1_out = fc1.forward(relu1_ofmap.reshape(1, 28*28*5))
-        prob = softmax(fc1_out)
-        train_cost += cse1.forward(prob, one_hot_y)
+            # forward propagation
+            conv1_ofmap = conv1.forward(mini_x_train)
+            relu1_ofmap = relu1.forward(conv1_ofmap)
+            fc1_out = fc1.forward(relu1_ofmap.reshape(1, 28 * 28 * 5))
+            prob = softmax(fc1_out)
+            train_cost += cse1.forward(prob, one_hot_y)
 
-        #backpropagation
-        dCSE1 = cse1.backprop(prob, one_hot_y)
-        dW_FC1, dZ_FC1, dB_FC1 = fc1.backprop(relu1_ofmap.reshape(1, 28*28*5), dCSE1)
-        dRELU1 = relu1.backprop(conv1_ofmap)
-        dK_CONV1 = conv1.backprop(mini_x_train, np.multiply(dRELU1, dZ_FC1.reshape(5, 28, 28)))
+            # backpropagation
+            dCSE1 = cse1.backprop(prob, one_hot_y)
+            dW_FC1, dZ_FC1, dB_FC1 = fc1.backprop(relu1_ofmap.reshape(1, 28 * 28 * 5), dCSE1)
+            dRELU1 = relu1.backprop(conv1_ofmap)
+            dK_CONV1 = conv1.backprop(mini_x_train, np.multiply(dRELU1, dZ_FC1.reshape(5, 28, 28)))
+            train_correct += np.sum(np.equal(np.argmax(prob, axis=1), mini_y_train))
 
-        #weight update
-        conv1.kernels -= lr*dK_CONV1
-        fc1.kernel -= lr*dW_FC1
-        fc1.bias -= lr*dB_FC1
+        # weight update
+        conv1.kernels -= lr * (batch_dK_CONV1 / batch_size)
+        fc1.kernel -= lr * (batch_dW_FC1 / batch_size)
+        fc1.bias -= lr * (batch_dB_FC1 / batch_size)
 
-        train_correct += np.sum(np.equal(np.argmax(prob, axis=1), mini_y_train))
 
-        if(total_trained % 100 == 0):
-            print("Trained: ", total_trained, "/", train_iterations, "\ttrain accuracy: ", train_correct/100, "\ttrain cost: ", train_cost/100)
+        if (total_trained % 100 == 0):
+            print("Trained: ", total_trained, "/", train_iterations, "\ttrain accuracy: ", train_correct / 100,
+                  "\ttrain cost: ", train_cost / 100)
             train_cost = 0
             train_correct = 0
 
@@ -137,7 +151,7 @@ for epoch in range(num_epochs):
 
         conv1_ofmap = conv1.forward(mini_x_test)
         relu1_ofmap = relu1.forward(conv1_ofmap)
-        fc1_out = fc1.forward(relu1_ofmap.reshape(1, 28*28*5))
+        fc1_out = fc1.forward(relu1_ofmap.reshape(1, 28 * 28 * 5))
         prob = softmax(fc1_out)
         test_correct += np.sum(np.equal(np.argmax(prob, axis=1), mini_y_test))
-    print("epoch # ", epoch, "\ttest accuracy: ", test_correct/test_iterations)
+    print("epoch # ", epoch, "\ttest accuracy: ", test_correct / test_iterations)
